@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "349272142301",
+    "firebase_url": "https://campuscare-5d499-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "campuscare-5d499",
+    "storage_bucket": "campuscare-5d499.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:349272142301:android:37d9b716b581b5085f0634",
+        "android_client_info": {
+          "package_name": "com.example.campuscare"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2wg_OBL-je3eZOYB-IqEfejxNoI_0evw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
