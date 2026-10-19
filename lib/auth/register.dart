@@ -1,3 +1,4 @@
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -21,13 +22,23 @@ class _RegisterPageState extends State<RegisterPage> {
   bool isLoading = false;
   bool hidePassword = true;
   bool hideConfirm = true;
+  String? nameError;
+  String? emailError;
+  String? passwordError;
+  String? confirmError;
 
-  int _strength(String p) {
+  // Password strength calculation
+  int _strength(String password) {
     var score = 0;
-    if (p.length >= 8) score++;
-    if (RegExp(r'[0-9]').hasMatch(p)) score++;
-    if (RegExp(r'[^A-Za-z0-9]').hasMatch(p)) score++;
-    if (RegExp(r'[a-z]').hasMatch(p) && RegExp(r'[A-Z]').hasMatch(p)) score++;
+
+    if (password.length >= 8) score++;
+    if (RegExp(r'[0-9]').hasMatch(password)) score++;
+    if (RegExp(r'[^A-Za-z0-9]').hasMatch(password)) score++;
+    if (RegExp(r'[a-z]').hasMatch(password) &&
+        RegExp(r'[A-Z]').hasMatch(password)) {
+      score++;
+    }
+
     return score;
   }
 
@@ -45,15 +56,21 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Widget _strengthBar() {
-    final score = passController.text.isEmpty ? 0 : _strength(passController.text);
+    final password = passController.text;
+    final score = password.isEmpty ? 0 : _strength(password);
+
     return Row(
-      children: List.generate(4, (i) {
+      children: List.generate(4, (index) {
         return Expanded(
           child: Container(
-            height: 5,
-            margin: EdgeInsets.only(right: i < 3 ? 8 : 0),
+            height: 4,
+            margin: EdgeInsets.only(
+              right: index < 3 ? 7 : 0,
+            ),
             decoration: BoxDecoration(
-              color: i < score ? _strengthColor(score) : kBorder,
+              color: index < score
+                  ? _strengthColor(score)
+                  : kBorder,
               borderRadius: BorderRadius.circular(3),
             ),
           ),
@@ -62,50 +79,87 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
+  // Firebase registration
+
   Future<void> registerUser() async {
+    if (isLoading) return;
+
     final name = nameController.text.trim();
     final email = emailController.text.trim();
     final password = passController.text;
+    final confirmation = confirmController.text;
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      ccSnack(context, 'Please fill in all fields', error: true);
-      return;
-    }
+    setState(() {
+      nameError = name.isEmpty ? 'Full name is required' : null;
 
-    if (password.length < 8) {
-      ccSnack(context, 'Password must be at least 8 characters', error: true);
-      return;
-    }
+      if (email.isEmpty) {
+        emailError = 'Student email is required';
+      } else if (!RegExp(
+        r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+      ).hasMatch(email)) {
+        emailError = 'Enter a valid email address';
+      } else {
+        emailError = null;
+      }
 
-    if (password != confirmController.text) {
-      ccSnack(context, "Passwords don't match", error: true);
+      if (password.isEmpty) {
+        passwordError = 'Password is required';
+      } else if (password.length < 8) {
+        passwordError = 'Password must be at least 8 characters';
+      } else {
+        passwordError = null;
+      }
+
+      if (confirmation.isEmpty) {
+        confirmError = 'Please confirm your password';
+      } else if (confirmation != password) {
+        confirmError = 'Passwords do not match';
+      } else {
+        confirmError = null;
+      }
+    });
+
+    if (nameError != null ||
+        emailError != null ||
+        passwordError != null ||
+        confirmError != null) {
+      ccSnack(
+        context,
+        'Please check the highlighted fields',
+        error: true,
+      );
       return;
     }
 
     setState(() => isLoading = true);
 
     try {
-      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final credential =
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Save the name so it shows up in the student's profile.
-      final user = cred.user;
+      final user = credential.user;
+
       if (user != null) {
         try {
           await user.updateDisplayName(name);
-          await FirebaseDatabase.instance.ref('students/${user.uid}').update({
+
+          await FirebaseDatabase.instance
+              .ref('students/${user.uid}')
+              .update({
             'uid': user.uid,
             'name': name,
             'email': email,
           });
         } catch (_) {
-          // Account is created either way; the name can be edited in Profile.
+          // Account is created even if profile saving fails.
         }
       }
 
       if (!mounted) return;
+
       ccSnack(context, 'Account created!');
       ccBackToRoot(context);
     } on FirebaseAuthException catch (e) {
@@ -116,16 +170,23 @@ class _RegisterPageState extends State<RegisterPage> {
       switch (e.code) {
         case 'weak-password':
           message = 'Password is too weak';
+          setState(() => passwordError = message);
           break;
+
         case 'email-already-in-use':
           message = 'Email is already registered';
+          setState(() => emailError = message);
           break;
+
         case 'invalid-email':
           message = 'Invalid email address';
+          setState(() => emailError = message);
           break;
+
         case 'network-request-failed':
           message = 'Check your internet connection';
           break;
+
         default:
           message = e.message ?? 'Registration failed';
       }
@@ -135,14 +196,18 @@ class _RegisterPageState extends State<RegisterPage> {
       if (!mounted) return;
       ccSnack(context, 'Something went wrong', error: true);
     } finally {
-      if (mounted) setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
   void openLogin() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const LoginPage()),
+      MaterialPageRoute(
+        builder: (_) => const LoginPage(),
+      ),
     );
   }
 
@@ -155,98 +220,288 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  // Input styling for this screen only
+
+  InputDecoration _fieldDecoration(
+      String hint, {
+        Widget? suffix,
+        String? error,
+      }) {
+    OutlineInputBorder border(Color color, double width) {
+      return OutlineInputBorder(
+        borderRadius: BorderRadius.circular(9),
+        borderSide: BorderSide(
+          color: color,
+          width: width,
+        ),
+      );
+    }
+
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(
+        color: kHint,
+        fontSize: 13,
+      ),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: Colors.white,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 14,
+      ),
+      errorText: error,
+      errorStyle: const TextStyle(
+        color: Color(0xFFEF4444),
+        fontSize: 12,
+      ),
+      border: border(kBorder, 1),
+      enabledBorder: border(kBorder, 1),
+      focusedBorder: border(kTeal, 1.5),
+      errorBorder: border(
+        const Color(0xFFEF4444),
+        1.5,
+      ),
+      focusedErrorBorder: border(
+        const Color(0xFFEF4444),
+        2,
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
-    return CcFormScaffold(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CcBackLink(onTap: () => Navigator.maybePop(context)),
-          const SizedBox(height: 16),
-          const CcLogo(),
-          const SizedBox(height: 32),
-          const Text(
-            'Join CampusCare',
-            style: TextStyle(
-              fontSize: 34,
-              fontWeight: FontWeight.w800,
-              height: 1.1,
-              color: kInk,
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'A healthier student life starts here.',
-            style: TextStyle(fontSize: 16, color: kSlate, height: 1.4),
-          ),
-          const SizedBox(height: 28),
-          const CcLabel('Full Name'),
-          TextField(
-            controller: nameController,
-            textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.next,
-            style: const TextStyle(fontSize: 16, color: kInk),
-            decoration: ccInput('Your full name'),
-          ),
-          const SizedBox(height: 18),
-          const CcLabel('Student Email'),
-          TextField(
-            controller: emailController,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            style: const TextStyle(fontSize: 16, color: kInk),
-            decoration: ccInput('you@university.edu'),
-          ),
-          const SizedBox(height: 18),
-          const CcLabel('Password'),
-          TextField(
-            controller: passController,
-            obscureText: hidePassword,
-            style: const TextStyle(fontSize: 16, color: kInk),
-            onChanged: (_) => setState(() {}),
-            decoration: ccInput(
-              'Enter your password',
-              suffix: ccEye(
-                hidePassword,
-                    () => setState(() => hidePassword = !hidePassword),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              keyboardDismissBehavior:
+              ScrollViewKeyboardDismissBehavior.onDrag,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                ),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      26, 18, 26, 25,
+                    ),
+                    child: Column(
+                      crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                      children: [
+                        // Back button
+                        CcBackLink(
+                          onTap: () =>
+                              Navigator.maybePop(context),
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        // CampusCare logo
+                        const CcLogo(size: 43),
+
+                        const SizedBox(height: 30),
+
+                        // Heading
+                        const Text(
+                          'Join CampusCare',
+                          style: TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.w800,
+                            height: 1.1,
+                            letterSpacing: -1.1,
+                            color: kInk,
+                          ),
+                        ),
+
+                        const SizedBox(height: 9),
+
+                        const Text(
+                          'A healthier student life starts here.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: kSlate,
+                            height: 1.5,
+                          ),
+                        ),
+
+                        const SizedBox(height: 26),
+
+                        // Full Name
+                        const CcLabel('Full Name'),
+
+                        TextField(
+                          controller: nameController,
+                          textCapitalization: TextCapitalization.words,
+                          textInputAction: TextInputAction.next,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: kInk,
+                          ),
+                          onChanged: (_) {
+                            if (nameError != null) {
+                              setState(() {
+                                nameError = null;
+                              });
+                            }
+                          },
+                          decoration: _fieldDecoration(
+                            'Your full name',
+                            error: nameError,
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Student Email
+                        const CcLabel('Student Email'),
+
+                        TextField(
+                          controller: emailController,
+                          keyboardType:
+                          TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: kInk,
+                          ),
+                          onChanged: (_) {
+                            if (emailError != null) {
+                              setState(() => emailError = null);
+                            }
+                          },
+                          decoration: _fieldDecoration(
+                            'you@university.edu',
+                            error: emailError,
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Password
+                        const CcLabel('Password'),
+
+                        TextField(
+                          controller: passController,
+                          obscureText: hidePassword,
+                          textInputAction: TextInputAction.next,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: kInk,
+                          ),
+                          onChanged: (_) {
+                            setState(() {
+                              passwordError = null;
+
+                              if (confirmController.text.isNotEmpty) {
+                                confirmError = null;
+                              }
+                            });
+                          },
+                          decoration: _fieldDecoration(
+                            'Enter your password',
+                            error: passwordError,
+                            suffix: ccEye(
+                              hidePassword,
+                                  () => setState(() => hidePassword = !hidePassword),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 11),
+
+                        // Password strength
+                        _strengthBar(),
+
+                        const SizedBox(height: 8),
+
+                        const Text(
+                          'At least 8 characters. Add numbers '
+                              'and symbols for strength.',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: kSlate,
+                            height: 1.4,
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Confirm Password
+                        const CcLabel('Confirm Password'),
+
+                        TextField(
+                          controller: confirmController,
+                          obscureText: hideConfirm,
+                          textInputAction: TextInputAction.done,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: kInk,
+                          ),
+                          onSubmitted: (_) => registerUser(),
+                          onChanged: (_) {
+                            if (confirmError != null) {
+                              setState(() => confirmError = null);
+                            }
+                          },
+                          decoration: _fieldDecoration(
+                            'Re-enter your password',
+                            error: confirmError,
+                            suffix: ccEye(
+                              hideConfirm,
+                                  () => setState(() => hideConfirm = !hideConfirm),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 22),
+
+                        // Register button
+                        SizedBox(
+                          width: double.infinity,
+                          child: CcButton(
+                            label: 'Create student account',
+                            loading: isLoading,
+                            onPressed: registerUser,
+                            color: kTeal,
+                            height: 49,
+                            radius: 9,
+                          ),
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        // Login navigation
+                        CcSwitchRow(
+                          prefix: 'Already have an account?',
+                          link: 'Log in',
+                          onTap: isLoading
+                              ? null
+                              : openLogin,
+                        ),
+
+                        const Spacer(),
+
+                        const SizedBox(height: 24),
+
+                        const CcFooterNote(
+                          text:
+                          'Your health information is private '
+                              'and secure.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          _strengthBar(),
-          const SizedBox(height: 8),
-          const Text(
-            'At least 8 characters. Add numbers and symbols for strength.',
-            style: TextStyle(fontSize: 13, color: kSlate),
-          ),
-          const SizedBox(height: 18),
-          const CcLabel('Confirm Password'),
-          TextField(
-            controller: confirmController,
-            obscureText: hideConfirm,
-            style: const TextStyle(fontSize: 16, color: kInk),
-            onSubmitted: (_) => registerUser(),
-            decoration: ccInput(
-              'Re-enter your password',
-              suffix: ccEye(
-                hideConfirm,
-                    () => setState(() => hideConfirm = !hideConfirm),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          CcButton(
-            label: 'Create student account',
-            loading: isLoading,
-            onPressed: registerUser,
-          ),
-          const SizedBox(height: 16),
-          CcSwitchRow(
-            prefix: 'Already have an account?',
-            link: 'Log in',
-            onTap: isLoading ? null : openLogin,
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }
