@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import 'appointment_model.dart';
 import 'appointment_service.dart';
+import '../main.dart' show CampusCareMenuButton;
 
 class AppointmentFormScreen extends StatefulWidget {
   final Appointment? existing;
@@ -433,14 +434,17 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
     ),
   );
 
-  Widget _appointmentSummary() => _panel(Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Row(children: [
-        Icon(Icons.event_note_outlined, color: teal, size: 21),
-        SizedBox(width: 8),
-        Text('Your appointment', style: TextStyle(color: ink, fontWeight: FontWeight.w800)),
-      ]),
+ Widget _appointmentSummary() => _panel(Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Row(children: [
+      const Icon(Icons.event_note_outlined, color: teal, size: 21),
+      const SizedBox(width: 8),
+      const Text(
+        'Your appointment',
+        style: TextStyle(color: ink, fontWeight: FontWeight.w800),
+      ),
+    ]),
       const SizedBox(height: 11),
       _summaryLine('Date', _date == null ? 'Not selected' : DateFormat('MMM d, yyyy').format(_date!)),
       _summaryLine('Time', _time == null ? 'Not selected' : _formatTime(_time!)),
@@ -458,11 +462,19 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
     return Scaffold(
       backgroundColor: pageBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: ink,
-        title: Text(_editing ? 'Edit appointment' : 'Appointments',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-      ),
+      backgroundColor: Colors.white,
+      foregroundColor: ink,
+      title: Text(
+      _editing ? 'Edit appointment' : 'Appointments',
+      style: const TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w700,
+    ),
+  ),
+  actions: const [
+    CampusCareMenuButton(),
+  ],
+),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 32),
         children: [

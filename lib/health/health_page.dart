@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'health_logic.dart';
+import '../main.dart' show CampusCareMenuButton;
 
 class HealthPage extends StatefulWidget {
   const HealthPage({super.key});
@@ -13,6 +14,7 @@ class _HealthPageState extends State<HealthPage> {
   static const greenDark = Color(0xFF146B47);
   static const mint = Color(0xFFF1F8F4);
   static const background = Color(0xFFF3F9F5);
+  bool _editing = false;
 
   final _logic = HealthLogic();
   final _formKey = GlobalKey<FormState>();
@@ -78,7 +80,10 @@ class _HealthPageState extends State<HealthPage> {
         allergies: _allergies.text,
         existingConditions: _conditions.text,
       );
-      if (mounted) _message('Health information saved!');
+      if (mounted) {
+        setState(() => _editing = false);
+        _message('Health information saved!');
+      }
     } catch (_) {
       if (mounted) _message('Failed to save health information', true);
     } finally {
@@ -112,168 +117,432 @@ class _HealthPageState extends State<HealthPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: background,
-      appBar: AppBar(
-        title: const Text(
-          'Health Information',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: green,
-        foregroundColor: Colors.white,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-        ),
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: green))
-          : !_logic.isLoggedIn
-          ? const Center(
-        child: Text('Please log in to view your health information.'),
-      )
-          : Form(
-        key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: ListView(
-          padding: const EdgeInsets.all(18),
-          children: [
-            const Text(
-              'Your Health Record',
-              style: TextStyle(
-                fontSize: 23,
-                fontWeight: FontWeight.bold,
-                color: greenDark,
-              ),
-            ),
-            const SizedBox(height: 5),
-            const Text(
-              'Keep these details up to date so the clinic can help you faster.',
-              style: TextStyle(color: Colors.black54),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 16,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  TextFormField(
-                    key: ValueKey(_studentId),
-                    initialValue: _studentId,
-                    readOnly: true,
-                    decoration: _decoration(
-                      'Student ID',
-                      Icons.badge_outlined,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: _bloodType,
-                    decoration: _decoration(
-                      'Blood Type',
-                      Icons.water_drop_outlined,
-                    ),
-                    hint: const Text('Select your blood type'),
-                    items: HealthLogic.bloodTypes
-                        .map((b) => DropdownMenuItem(
-                      value: b,
-                      child: Text(b),
-                    ))
-                        .toList(),
-                    onChanged: (v) => setState(() => _bloodType = v),
-                    validator: (v) => v == null
-                        ? 'Please select your blood type'
-                        : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _allergies,
-                    maxLines: 3,
-                    decoration: _decoration(
-                      'Allergies',
-                      Icons.warning_amber_rounded,
-                      hint: "e.g. Peanuts, Penicillin (or 'None')",
-                    ),
-                    validator: (v) => v == null || v.trim().isEmpty
-                        ? "Enter your allergies, or write 'None'"
-                        : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _conditions,
-                    maxLines: 3,
-                    decoration: _decoration(
-                      'Existing Conditions',
-                      Icons.medical_information_outlined,
-                      hint: "e.g. Asthma (or 'None')",
-                    ),
-                    validator: (v) => v == null || v.trim().isEmpty
-                        ? "Enter your conditions, or write 'None'"
-                        : null,
-                  ),
-                  const SizedBox(height: 22),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: FilledButton.icon(
-                      onPressed: _saving ? null : _save,
-                      icon: _saving
-                          ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                          : const Icon(Icons.save_outlined),
-                      label: Text(
-                        _saving ? 'Saving...' : 'Save Health Info',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: green,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            const Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.lock_outline, size: 16, color: Colors.grey),
-                SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'Your health information is private and only visible to you.',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
+  
+Widget _infoCard({
+  required IconData icon,
+  required String label,
+  required String value,
+  Color iconColor = const Color(0xFF008F89),
+}) {
+  return Container(
+    padding: const EdgeInsets.symmetric(
+      horizontal: 16,
+      vertical: 15,
+    ),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(13),
+      border: Border.all(color: const Color(0xFFE5E8EB)),
+    ),
+    child: Row(
+      children: [
+        Icon(icon, color: iconColor, size: 22),
+        const SizedBox(width: 17),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF697386),
                 ),
-              ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF17243B),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _sectionTitle(String title) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 10, top: 5),
+    child: Text(
+      title,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: Color(0xFF183B3B),
+      ),
+    ),
+  );
+}
+
+Widget _contactDetail(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 13),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xFF697386),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF17243B),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+Widget _buildEditForm() {
+  return Form(
+    key: _formKey,
+    autovalidateMode: AutovalidateMode.onUserInteraction,
+    child: ListView(
+      padding: const EdgeInsets.all(18),
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Edit health information',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF17243B),
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                FocusScope.of(context).unfocus();
+                setState(() => _editing = false);
+              },
+              child: const Text('Cancel'),
             ),
           ],
         ),
+        const SizedBox(height: 20),
+
+        TextFormField(
+          key: ValueKey(_studentId),
+          initialValue: _studentId,
+          readOnly: true,
+          decoration: _decoration(
+            'Student ID',
+            Icons.badge_outlined,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        DropdownButtonFormField<String>(
+          value: _bloodType,
+          decoration: _decoration(
+            'Blood Type',
+            Icons.water_drop_outlined,
+          ),
+          hint: const Text('Select your blood type'),
+          items: HealthLogic.bloodTypes
+              .map(
+                (b) => DropdownMenuItem(
+                  value: b,
+                  child: Text(b),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            setState(() => _bloodType = value);
+          },
+          validator: (value) => value == null
+              ? 'Please select your blood type'
+              : null,
+        ),
+        const SizedBox(height: 16),
+
+        TextFormField(
+          controller: _allergies,
+          maxLines: 3,
+          decoration: _decoration(
+            'Allergies',
+            Icons.warning_amber_rounded,
+            hint: "Enter allergies or 'None'",
+          ),
+          validator: (value) =>
+              value == null || value.trim().isEmpty
+                  ? "Enter allergies or 'None'"
+                  : null,
+        ),
+        const SizedBox(height: 16),
+
+        TextFormField(
+          controller: _conditions,
+          maxLines: 3,
+          decoration: _decoration(
+            'Existing Conditions',
+            Icons.medical_information_outlined,
+            hint: "Enter conditions or 'None'",
+          ),
+          validator: (value) =>
+              value == null || value.trim().isEmpty
+                  ? "Enter conditions or 'None'"
+                  : null,
+        ),
+        const SizedBox(height: 24),
+
+        SizedBox(
+          height: 50,
+          child: FilledButton.icon(
+            onPressed: _saving ? null : _save,
+            icon: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.save_outlined),
+            label: Text(
+              _saving ? 'Saving...' : 'Save Health Info',
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF008F89),
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+  
+  @override
+  Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: const Color(0xFFFCFDFD),
+
+    appBar: AppBar(
+      leading: const CampusCareMenuButton(),
+      backgroundColor: Colors.white,
+      foregroundColor: const Color(0xFF17243B),
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      automaticallyImplyLeading: false,
+      titleSpacing: 16,
+      title: const Row(
+        children: [
+          SizedBox(width: 12),
+          Text(
+            'Health',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
-    );
-  }
+      actions: [
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(
+            Icons.notifications_none,
+            size: 22,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(right: 14),
+          child: CircleAvatar(
+            radius: 15,
+            backgroundColor: const Color(0xFFE7F5F3),
+            child: const Icon(
+              Icons.person_outline,
+              size: 19,
+              color: Color(0xFF008F89),
+            ),
+          ),
+        ),
+      ],
+    ),
+
+    body: _loading
+        ? const Center(
+            child: CircularProgressIndicator(
+              color: Color(0xFF008F89),
+            ),
+          )
+        : !_logic.isLoggedIn
+            ? const Center(
+                child: Text(
+                  'Please log in to view your health information.',
+                ),
+              )
+            : _editing
+                ? _buildEditForm()
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      14, 18, 14, 24,
+                    ),
+                    children: [
+                      Row(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Your health, in\none place.',
+                              style: TextStyle(
+                                fontSize: 22,
+                                height: 1.12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                                color: Color(0xFF17243B),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              setState(() => _editing = true);
+                            },
+                            icon: const Icon(
+                              Icons.edit_outlined,
+                              size: 13,
+                            ),
+                            label: const Text(
+                              'Edit information',
+                              style: TextStyle(fontSize: 10),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor:
+                                  const Color(0xFF17243B),
+                              side: const BorderSide(
+                                color: Color(0xFFD9DEE5),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 10,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      const Text(
+                        'The important details that help you\n'
+                        'feel prepared for every visit.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          height: 1.5,
+                          color: Color(0xFF7A8495),
+                        ),
+                      ),
+
+                      const SizedBox(height: 17),
+
+                      _infoCard(
+                        icon: Icons.water_drop_outlined,
+                        label: 'Blood type',
+                        value: _bloodType ?? 'Not provided',
+                      ),
+
+                      const SizedBox(height: 9),
+
+                      _infoCard(
+                        icon: Icons.health_and_safety_outlined,
+                        label: 'Known allergies',
+                        value: _allergies.text.trim().isEmpty
+                            ? 'Not provided'
+                            : _allergies.text.trim(),
+                      ),
+
+                      const SizedBox(height: 9),
+
+                      _infoCard(
+                        icon: Icons.favorite_border,
+                        label: 'Existing medical conditions',
+                        value: _conditions.text.trim().isEmpty
+                            ? 'Not provided'
+                            : _conditions.text.trim(),
+                      ),
+
+                      const SizedBox(height: 9),
+
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(
+                          15, 16, 15, 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(13),
+                          border: Border.all(
+                            color: const Color(0xFFE5E8EB),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(
+                                  Icons.call_outlined,
+                                  color: Color(0xFF008F89),
+                                  size: 19,
+                                ),
+                                SizedBox(width: 9),
+                                Text(
+                                  'Emergency contact',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF183B3B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 19),
+
+                            // Replace these values with the
+                            // actual saved emergency contact.
+                            _contactDetail(
+                              'Contact person',
+                              'Not provided',
+                            ),
+                            _contactDetail(
+                              'Relationship',
+                              'Not provided',
+                            ),
+                            _contactDetail(
+                              'Contact number',
+                              'Not provided',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+  );
+}
 }

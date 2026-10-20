@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../appointments/appointment_model.dart';
 import '../appointments/appointment_service.dart';
 import '../profile/profile_logic.dart';
+import '../main.dart' show CampusCareMenuButton;
 
 class HomePage extends StatefulWidget {
   final VoidCallback onAppointments;
@@ -379,11 +380,8 @@ class _HomePageState extends State<HomePage> {
                               style: TextStyle(color: ink,
                                   fontSize: 19, fontWeight: FontWeight.w800)),
                         ),
-                        IconButton(
-                          tooltip: 'Account and settings',
-                          onPressed: widget.onAccount,
-                          icon: const Icon(Icons.menu_rounded, color: ink),
-                        ),
+                        const CampusCareMenuButton(),
+                      
                       ]),
                       const SizedBox(height: 22),
                       Text('Hello, ${_firstName(profile)}!',

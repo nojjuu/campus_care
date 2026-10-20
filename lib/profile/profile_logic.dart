@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:image_picker/image_picker.dart';
 
 class StudentProfile {
   final String uid;
@@ -8,6 +12,7 @@ class StudentProfile {
   final String program;
   final String contactNumber;
   final String emergencyContact;
+  final String photoBase64;
 
   const StudentProfile({
     required this.uid,
@@ -16,8 +21,11 @@ class StudentProfile {
     required this.program,
     required this.contactNumber,
     required this.emergencyContact,
+    this.photoBase64 = '',
   });
 
+  /// photoBase64 is intentionally NOT included here, so saving the form
+  /// never touches the photo. The photo is saved separately via savePhoto().
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,
@@ -38,6 +46,7 @@ class StudentProfile {
       program: map['program']?.toString() ?? '',
       contactNumber: map['contactNumber']?.toString() ?? '',
       emergencyContact: map['emergencyContact']?.toString() ?? '',
+      photoBase64: map['photoBase64']?.toString() ?? '',
     );
   }
 }
@@ -56,6 +65,40 @@ class ProfileService {
 
   Future<void> saveProfile(StudentProfile profile) {
     return _ref(profile.uid).update(profile.toMap());
+  }
+
+  Future<void> savePhoto(String uid, String photoBase64) {
+    return _ref(uid).update({
+      'photoBase64': photoBase64,
+      'updatedAt': ServerValue.timestamp,
+    });
+  }
+}
+
+class PhotoService {
+  final ImagePicker _picker = ImagePicker();
+
+  /// Picks an image, shrinks it (max 512x512, quality 60) and returns base64.
+  Future<String?> pickAsBase64(ImageSource source) async {
+    final picked = await _picker.pickImage(
+      source: source,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 60,
+    );
+    if (picked == null) return null;
+
+    final Uint8List bytes = await picked.readAsBytes();
+    return base64Encode(bytes);
+  }
+
+  static Uint8List? decode(String base64String) {
+    if (base64String.isEmpty) return null;
+    try {
+      return base64Decode(base64String);
+    } catch (_) {
+      return null;
+    }
   }
 }
 
@@ -78,6 +121,7 @@ class ProfileValidators {
 
 class ProfileLogic {
   final ProfileService _service = ProfileService();
+  final PhotoService _photos = PhotoService();
 
   String? get uid => FirebaseAuth.instance.currentUser?.uid;
 
@@ -111,5 +155,27 @@ class ProfileLogic {
         emergencyContact: emergencyContact.trim(),
       ),
     );
+  }
+
+  /// Returns the new base64 photo, or null if the user cancelled.
+  Future<String?> pickAndSavePhoto(ImageSource source) async {
+    final id = uid;
+    if (id == null) {
+      throw StateError('No logged-in user.');
+    }
+
+    final photo = await _photos.pickAsBase64(source);
+    if (photo == null) return null;
+
+    await _service.savePhoto(id, photo);
+    return photo;
+  }
+
+  Future<void> removePhoto() async {
+    final id = uid;
+    if (id == null) {
+      throw StateError('No logged-in user.');
+    }
+    await _service.savePhoto(id, '');
   }
 }
