@@ -77,6 +77,24 @@ class HealthLogic {
     return id;
   }
 
+  Future<Map<String, String>> getEmergencyDetails() async {
+    final id = uid;
+    final empty = {'name': '', 'relationship': '', 'number': ''};
+    if (id == null) return empty;
+    try {
+      final snap = await FirebaseDatabase.instance.ref('students/$id').get();
+      if (snap.exists && snap.value is Map) {
+        final m = Map<dynamic, dynamic>.from(snap.value as Map);
+        return {
+          'name': m['emergencyName']?.toString() ?? '',
+          'relationship': m['emergencyRelationship']?.toString() ?? '',
+          'number': m['emergencyContact']?.toString() ?? '',
+        };
+      }
+    } catch (_) {}
+    return empty;
+  }
+
   Future<HealthInfo?> load() async {
     final id = uid;
     if (id == null) return null;
