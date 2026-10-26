@@ -1,29 +1,36 @@
 import 'package:flutter/material.dart';
+
 import 'auth_service.dart';
+import '../settings/settings_page.dart';
 
 const _green = Color(0xFF1B8A5A);
 const _greenDark = Color(0xFF146B47);
 const _mint = Color(0xFFF1F8F4);
 
-/// Shows who is logged in and has the Logout button.
+/// Displays the signed-in account, Settings and Logout.
 class AccountPage extends StatelessWidget {
   const AccountPage({super.key});
 
   Future<void> _confirmLogout(BuildContext context, AuthService auth) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
         ),
         title: const Text(
           'Log out?',
-          style: TextStyle(color: _greenDark, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: _greenDark,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        content: const Text('You will need to log in again to use CampusCare.'),
+        content: const Text(
+          'You will need to log in again to use CampusCare.',
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Stay', style: TextStyle(color: _green)),
           ),
           FilledButton(
@@ -34,27 +41,49 @@ class AccountPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Log out'),
           ),
         ],
       ),
     );
 
-    if (ok == true) {
+    if (ok != true || !context.mounted) return;
+
+    try {
       await auth.logout();
       if (context.mounted) {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not log out. Please try again.')),
+        );
+      }
     }
+  }
+
+  void _openSettings(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const CampusCareSettingsPage(),
+      ),
+    );
   }
 
   Widget _header(BuildContext context, String email) {
     final initial = email.isNotEmpty ? email[0].toUpperCase() : '?';
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-          24, MediaQuery.of(context).padding.top + 32, 24, 56),
+        24,
+        MediaQuery.of(context).padding.top + 32,
+        24,
+        56,
+      ),
       decoration: const BoxDecoration(
         color: _green,
         borderRadius: BorderRadius.only(
@@ -120,7 +149,7 @@ class AccountPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 18,
                       offset: const Offset(0, 6),
                     ),
@@ -137,8 +166,7 @@ class AccountPage extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.account_circle_outlined,
-                              color: _green),
+                          const Icon(Icons.account_circle_outlined, color: _green),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -146,12 +174,12 @@ class AccountPage extends StatelessWidget {
                               children: [
                                 const Text(
                                   'Logged in as',
-                                  style: TextStyle(
-                                      color: Colors.grey, fontSize: 12),
+                                  style: TextStyle(color: Colors.grey, fontSize: 12),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   email,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
@@ -165,6 +193,38 @@ class AccountPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 22),
+                    Material(
+                      color: _mint,
+                      borderRadius: BorderRadius.circular(14),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => _openSettings(context),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.settings_outlined, color: _green, size: 24),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Settings',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: _greenDark,
+                                  ),
+                                ),
+                              ),
+                              Icon(Icons.chevron_right, color: _green),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     SizedBox(
                       height: 50,
                       child: FilledButton.icon(
@@ -172,7 +232,9 @@ class AccountPage extends StatelessWidget {
                         label: const Text(
                           'Log out',
                           style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w600),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         style: FilledButton.styleFrom(
                           backgroundColor: _green,
