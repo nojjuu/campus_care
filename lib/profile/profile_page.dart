@@ -5,7 +5,9 @@ import 'profile_logic.dart';
 import '../main.dart' show CampusCareMenuButton;
 
 class StudentProfilePage extends StatefulWidget {
-  const StudentProfilePage({super.key});
+  final VoidCallback? onHealth;
+
+  const StudentProfilePage({super.key, this.onHealth});
 
   @override
   State<StudentProfilePage> createState() => _StudentProfilePageState();
@@ -26,6 +28,8 @@ final _name = TextEditingController();
 final _studentId = TextEditingController();
 final _contact = TextEditingController();
 final _emergency = TextEditingController();
+final _emergencyName = TextEditingController();
+final _emergencyRelationship = TextEditingController();
 
 String? _program;
 bool _loading = true;
@@ -46,6 +50,8 @@ _name.dispose();
 _studentId.dispose();
 _contact.dispose();
 _emergency.dispose();
+_emergencyName.dispose();
+_emergencyRelationship.dispose();
 super.dispose();
 }
 
@@ -215,6 +221,8 @@ _name.text = p.name;
 _studentId.text = p.studentId;
 _contact.text = p.contactNumber;
 _emergency.text = p.emergencyContact;
+_emergencyName.text = p.emergencyName;
+_emergencyRelationship.text = p.emergencyRelationship;
 _photoBase64 = p.photoBase64;
 _program = ['BSIT', 'BSIS', 'BLIS'].contains(p.program)
 ? p.program
@@ -248,8 +256,13 @@ Future<void> _save() async {
       program: _program!,
       contactNumber: _contact.text.trim(),
       emergencyContact: _emergency.text.trim(),
+      emergencyName: _emergencyName.text.trim(),
+      emergencyRelationship: _emergencyRelationship.text.trim(),
     );
-    if (mounted) _message('Profile saved successfully!');
+    if (mounted) {
+      setState(() => _editing = false);
+      _message('Profile saved successfully!');
+    }
   } catch (_) {
     if (mounted) _message('Failed to save profile', true);
   } finally {
@@ -601,18 +614,10 @@ Widget _buildProfileView() {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _profileDetail(
-              'Emergency contact number',
-              _emergency.text.trim(),
-            ),
-            _profileDetail(
-              'Contact person',
-              'Not provided',
-            ),
-            _profileDetail(
-              'Relationship',
-              'Not provided',
-            ),
+            _cardHeading('Emergency contact'),
+            _profileDetail('Contact person', _emergencyName.text.trim()),
+            _profileDetail('Relationship', _emergencyRelationship.text.trim()),
+            _profileDetail('Emergency contact number', _emergency.text.trim()),
           ],
         ),
       ),
@@ -640,11 +645,7 @@ Widget _buildProfileView() {
             _accountRow(
               Icons.favorite_border,
               'Manage health information',
-              () {
-                _message(
-                  'Open Health using your app navigation.',
-                );
-              },
+                  () => widget.onHealth?.call(),
             ),
 
             const Divider(
@@ -848,6 +849,19 @@ Widget _buildEditForm() {
                 ),
               ),
 
+              _field(
+                _emergencyName,
+                'Emergency Contact Person',
+                Icons.person_outline,
+              ),
+
+              _field(
+                _emergencyRelationship,
+                'Relationship',
+                Icons.family_restroom_outlined,
+                hint: 'e.g. Mother, Father, Guardian',
+              ),
+
               const SizedBox(height: 8),
 
               SizedBox(
@@ -905,14 +919,14 @@ Widget build(BuildContext context) {
       elevation: 0,
       scrolledUnderElevation: 0,
       automaticallyImplyLeading: false,
-      titleSpacing: 18,
+      titleSpacing: 16,
       title: const Row(
         children: [
-          SizedBox(width: 14),
+          SizedBox(width: 12),
           Text(
             'Profile',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -943,16 +957,16 @@ Widget build(BuildContext context) {
               borderRadius: BorderRadius.circular(7),
               child: PhotoService.decode(_photoBase64) == null
                   ? const Icon(
-                      Icons.person_outline,
-                      size: 19,
-                      color: Color(0xFF008F89),
-                    )
+                Icons.person_outline,
+                size: 19,
+                color: Color(0xFF008F89),
+              )
                   : Image.memory(
-                      PhotoService.decode(_photoBase64)!,
-                      width: 29,
-                      height: 29,
-                      fit: BoxFit.cover,
-                    ),
+                PhotoService.decode(_photoBase64)!,
+                width: 29,
+                height: 29,
+                fit: BoxFit.cover,
+              ),
             ),
           ),
         ),

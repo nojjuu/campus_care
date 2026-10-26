@@ -471,9 +471,7 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
       fontWeight: FontWeight.w700,
     ),
   ),
-  actions: const [
-    CampusCareMenuButton(),
-  ],
+
 ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 32),

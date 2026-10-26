@@ -201,7 +201,6 @@ Widget _buildCampusCareDrawer() {
             icon: Icons.add,
             title: 'Book appointment',
             selected: false,
-            highlighted: true,
             onTap: () {
               Navigator.pop(context);
               _openBooking();
@@ -233,16 +232,16 @@ Widget _buildCampusCareDrawer() {
                 ),
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.verified_user_outlined,
                     color: Color(0xFF00846F),
                     size: 19,
                   ),
-                  SizedBox(height: 9),
-                  Text(
+                  const SizedBox(height: 9),
+                  const Text(
                     'A little care, every day.',
                     style: TextStyle(
                       fontSize: 11,
@@ -250,21 +249,27 @@ Widget _buildCampusCareDrawer() {
                       color: Color(0xFF17243B),
                     ),
                   ),
-                  SizedBox(height: 5),
-                  Text(
+                  const SizedBox(height: 5),
+                  const Text(
                     'Your well-being comes first.',
                     style: TextStyle(
                       fontSize: 10,
                       color: Color(0xFF71819A),
                     ),
                   ),
-                  SizedBox(height: 12),
-                  Text(
-                    'Keep your profile up to date ↗',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF00846F),
+                  const SizedBox(height: 12),
+                  InkWell(
+                    onTap: () => _drawerNavigate(3),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4),
+                      child: Text(
+                        'Keep your profile up to date ↗',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF00846F),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -450,9 +455,15 @@ void _drawerNavigate(int index) {
             onProfile: () => _selectPage(3),
             onAccount: _openAccount,
           ),
-          AppointmentsScreen(),
-          const HealthPage(),
-          const StudentProfilePage(),
+          AppointmentsScreen(
+              onProfile: () => _selectPage(3)
+          ),
+          HealthPage(
+              onProfile: () => _selectPage(3)
+          ),
+          StudentProfilePage(
+              onHealth: () => _selectPage(2),
+          ),
         ],
       ),
       bottomNavigationBar: NavigationBar(

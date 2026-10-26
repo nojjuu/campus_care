@@ -41,7 +41,12 @@ class AccountPage extends StatelessWidget {
       ),
     );
 
-    if (ok == true) await auth.logout();
+    if (ok == true) {
+      await auth.logout();
+      if (context.mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    }
   }
 
   Widget _header(BuildContext context, String email) {

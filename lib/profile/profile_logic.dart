@@ -12,6 +12,8 @@ class StudentProfile {
   final String program;
   final String contactNumber;
   final String emergencyContact;
+  final String emergencyName;
+  final String emergencyRelationship;
   final String photoBase64;
 
   const StudentProfile({
@@ -21,6 +23,8 @@ class StudentProfile {
     required this.program,
     required this.contactNumber,
     required this.emergencyContact,
+    this.emergencyName = '',
+    this.emergencyRelationship = '',
     this.photoBase64 = '',
   });
 
@@ -34,6 +38,8 @@ class StudentProfile {
       'program': program,
       'contactNumber': contactNumber,
       'emergencyContact': emergencyContact,
+      'emergencyName': emergencyName,
+      'emergencyRelationship': emergencyRelationship,
       'updatedAt': ServerValue.timestamp,
     };
   }
@@ -46,6 +52,8 @@ class StudentProfile {
       program: map['program']?.toString() ?? '',
       contactNumber: map['contactNumber']?.toString() ?? '',
       emergencyContact: map['emergencyContact']?.toString() ?? '',
+      emergencyName: map['emergencyName']?.toString() ?? '',
+      emergencyRelationship: map['emergencyRelationship']?.toString() ?? '',
       photoBase64: map['photoBase64']?.toString() ?? '',
     );
   }
@@ -139,6 +147,8 @@ class ProfileLogic {
     required String program,
     required String contactNumber,
     required String emergencyContact,
+    String emergencyName = '',
+    String emergencyRelationship = '',
   }) async {
     final id = uid;
     if (id == null) {
@@ -153,6 +163,8 @@ class ProfileLogic {
         program: program.trim(),
         contactNumber: contactNumber.trim(),
         emergencyContact: emergencyContact.trim(),
+        emergencyName: emergencyName.trim(),
+        emergencyRelationship: emergencyRelationship.trim(),
       ),
     );
   }

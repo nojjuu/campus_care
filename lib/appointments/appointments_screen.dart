@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../main.dart';
 import 'appointment_form_screen.dart';
 import 'appointment_model.dart';
 import 'appointment_service.dart';
@@ -8,7 +9,8 @@ import 'appointment_service.dart';
 /// Student-facing appointment list, styled to match the CampusCare Figma.
 /// Firebase reads/writes still go through the existing AppointmentService.
 class AppointmentsScreen extends StatefulWidget {
-  const AppointmentsScreen({super.key});
+  final VoidCallback? onProfile;
+  const AppointmentsScreen({super.key, this.onProfile});
 
   @override
   State<AppointmentsScreen> createState() => _AppointmentsScreenState();
@@ -293,6 +295,54 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+
+      appBar: AppBar(
+        leading: const CampusCareMenuButton(),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF17243B),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
+        title: const Row(
+          children: [
+            SizedBox(width: 12),
+            Text(
+              'Appointments',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(
+              Icons.notifications_none,
+              size: 22,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 14),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: widget.onProfile,
+              child: CircleAvatar(
+                radius: 15,
+                backgroundColor: const Color(0xFFE7F5F3),
+                child: const Icon(
+                  Icons.person_outline,
+                  size: 19,
+                  color: Color(0xFF008F89),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+
       backgroundColor: bg,
       body: SafeArea(
         child: StreamBuilder<List<Appointment>>(

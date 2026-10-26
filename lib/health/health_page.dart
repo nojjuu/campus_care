@@ -3,7 +3,8 @@ import 'health_logic.dart';
 import '../main.dart' show CampusCareMenuButton;
 
 class HealthPage extends StatefulWidget {
-  const HealthPage({super.key});
+  final VoidCallback? onProfile;
+  const HealthPage({super.key, this.onProfile});
 
   @override
   State<HealthPage> createState() => _HealthPageState();
@@ -23,6 +24,9 @@ class _HealthPageState extends State<HealthPage> {
 
   String? _bloodType;
   String _studentId = 'Loading...';
+  String _emergencyName = '';
+  String _emergencyRelationship = '';
+  String _emergencyNumber = '';
   bool _loading = true;
   bool _saving = false;
 
@@ -43,9 +47,13 @@ class _HealthPageState extends State<HealthPage> {
     try {
       final id = await _logic.getStudentId();
       final h = await _logic.load();
+      final emergency = await _logic.getEmergencyDetails();
       if (!mounted) return;
 
       _studentId = id;
+      _emergencyName = emergency['name'] ?? '';
+      _emergencyRelationship = emergency['relationship'] ?? '';
+      _emergencyNumber = emergency['number'] ?? '';
       if (h != null) {
         _bloodType =
         HealthLogic.bloodTypes.contains(h.bloodType) ? h.bloodType : null;
@@ -367,13 +375,17 @@ Widget _buildEditForm() {
         ),
         Padding(
           padding: const EdgeInsets.only(right: 14),
-          child: CircleAvatar(
-            radius: 15,
-            backgroundColor: const Color(0xFFE7F5F3),
-            child: const Icon(
-              Icons.person_outline,
-              size: 19,
-              color: Color(0xFF008F89),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: widget.onProfile,
+            child: CircleAvatar(
+              radius: 15,
+              backgroundColor: const Color(0xFFE7F5F3),
+              child: const Icon(
+                Icons.person_outline,
+                size: 19,
+                color: Color(0xFF008F89),
+              ),
             ),
           ),
         ),
@@ -526,18 +538,12 @@ Widget _buildEditForm() {
 
                             // Replace these values with the
                             // actual saved emergency contact.
-                            _contactDetail(
-                              'Contact person',
-                              'Not provided',
-                            ),
-                            _contactDetail(
-                              'Relationship',
-                              'Not provided',
-                            ),
-                            _contactDetail(
-                              'Contact number',
-                              'Not provided',
-                            ),
+                            _contactDetail('Contact person',
+                                _emergencyName.isEmpty ? 'Not provided' : _emergencyName),
+                            _contactDetail('Relationship',
+                                _emergencyRelationship.isEmpty ? 'Not provided' : _emergencyRelationship),
+                            _contactDetail('Contact number',
+                                _emergencyNumber.isEmpty ? 'Not provided' : _emergencyNumber),
                           ],
                         ),
                       ),
