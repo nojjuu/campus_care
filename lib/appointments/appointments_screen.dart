@@ -317,13 +317,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.notifications_none,
-              size: 22,
-            ),
-          ),
+          const CampusCareNotificationButton(),
           Padding(
             padding: const EdgeInsets.only(right: 14),
             child: InkWell(

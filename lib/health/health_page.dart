@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'health_logic.dart';
-import '../main.dart' show CampusCareMenuButton;
+import '../main.dart' show CampusCareMenuButton, CampusCareNotificationButton;
 
 class HealthPage extends StatefulWidget {
   final VoidCallback? onProfile;
@@ -366,13 +366,7 @@ Widget _buildEditForm() {
         ],
       ),
       actions: [
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(
-            Icons.notifications_none,
-            size: 22,
-          ),
-        ),
+        const CampusCareNotificationButton(),
         Padding(
           padding: const EdgeInsets.only(right: 14),
           child: InkWell(

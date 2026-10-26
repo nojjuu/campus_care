@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'profile_logic.dart';
-import '../main.dart' show CampusCareMenuButton;
+import '../main.dart' show CampusCareMenuButton, CampusCareNotificationButton;
 
 class StudentProfilePage extends StatefulWidget {
   final VoidCallback? onHealth;
+  final VoidCallback? onSetting;
 
-  const StudentProfilePage({super.key, this.onHealth});
+  const StudentProfilePage({super.key, this.onHealth, this.onSetting});
 
   @override
   State<StudentProfilePage> createState() => _StudentProfilePageState();
@@ -653,16 +654,6 @@ Widget _buildProfileView() {
               color: Color(0xFFF0F3F7),
             ),
 
-            _accountRow(
-              Icons.notifications_none,
-              'Notification preferences',
-              () {
-                _message(
-                  'Connect this option to your notification settings.',
-                );
-              },
-            ),
-
             const Divider(
               height: 1,
               color: Color(0xFFF0F3F7),
@@ -670,12 +661,8 @@ Widget _buildProfileView() {
 
             _accountRow(
               Icons.settings_outlined,
-              'Settings & demo mode',
-              () {
-                _message(
-                  'Connect this option to your settings page.',
-                );
-              },
+              'Settings',
+              () => widget.onSetting?.call(),
             ),
 
             const SizedBox(height: 20),
@@ -933,15 +920,7 @@ Widget build(BuildContext context) {
         ],
       ),
       actions: [
-        IconButton(
-          onPressed: () {
-            _message('Notifications');
-          },
-          icon: const Icon(
-            Icons.notifications_none,
-            size: 22,
-          ),
-        ),
+        const CampusCareNotificationButton(),
         Padding(
           padding: const EdgeInsets.only(right: 15),
           child: Container(

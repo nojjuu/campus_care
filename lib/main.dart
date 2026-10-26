@@ -14,6 +14,9 @@ import 'firebase_options.dart';
 import 'health/health_page.dart';
 import 'home/home_page.dart';
 import 'profile/profile_page.dart';
+import 'package:intl/intl.dart';
+import 'appointments/appointment_model.dart';
+import 'appointments/appointment_service.dart';
 
 Future<void> main() async {
 WidgetsFlutterBinding.ensureInitialized();
@@ -93,6 +96,125 @@ homeShellScaffoldKey.currentState?.openDrawer();
 }
 }
 
+class CampusCareNotificationButton extends StatefulWidget {
+  const CampusCareNotificationButton({super.key});
+
+  @override
+  State<CampusCareNotificationButton> createState() =>
+      _CampusCareNotificationButtonState();
+}
+
+class _CampusCareNotificationButtonState
+    extends State<CampusCareNotificationButton> {
+  final AppointmentService _service = AppointmentService();
+  late final Stream<List<Appointment>> _stream = _service.stream();
+
+  String _when(DateTime dt) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(dt.year, dt.month, dt.day);
+    final diff = day.difference(today).inDays;
+    final time = DateFormat('h:mm a').format(dt);
+    if (diff == 0) return 'Today · $time';
+    if (diff == 1) return 'Tomorrow · $time';
+    return '${DateFormat('MMM d').format(dt)} · $time';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<Appointment>>(
+      stream: _stream,
+      builder: (context, snapshot) {
+        final now = DateTime.now();
+        final upcoming = (snapshot.data ?? [])
+            .where((a) => a.isActive && !a.dateTime.isBefore(now))
+            .toList()
+          ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+
+        return PopupMenuButton<int>(
+          tooltip: 'Reminders',
+          offset: const Offset(0, 48),
+          color: Colors.white,
+          constraints: const BoxConstraints(minWidth: 250, maxWidth: 300),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          icon: Badge(
+            isLabelVisible: upcoming.isNotEmpty,
+            label: Text('${upcoming.length}'),
+            backgroundColor: const Color(0xFF00846F),
+            child: const Icon(Icons.notifications_none, size: 22),
+          ),
+          itemBuilder: (context) => [
+            const PopupMenuItem<int>(
+              enabled: false,
+              height: 36,
+              child: Text(
+                'Appointment reminders',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF17243B),
+                ),
+              ),
+            ),
+            const PopupMenuDivider(height: 1),
+            if (upcoming.isEmpty)
+              const PopupMenuItem<int>(
+                enabled: false,
+                child: Text(
+                  'No upcoming appointments',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF71819A)),
+                ),
+              )
+            else
+              ...upcoming.take(5).map(
+                    (a) => PopupMenuItem<int>(
+                  enabled: false,
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.event_note_outlined,
+                        size: 20,
+                        color: Color(0xFF00846F),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              a.reason,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF17243B),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${_when(a.dateTime)} · ${a.status}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF71819A),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
 
 class _HomeShellState extends State<HomeShell> {
 // Page indexes: Home = 0, Appointments = 1, Health = 2, Profile = 3.
@@ -471,6 +593,7 @@ onProfile: () => _selectPage(3)
 ),
 StudentProfilePage(
 onHealth: () => _selectPage(2),
+  onSetting: _openSettings,
 ),
 ],
 ),
